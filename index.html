@@ -237,7 +237,7 @@
             <div class="form-group" id="load-current-group">
                 <label for="loadCurrent">Load Current (A per phase/line):</label>
                  <div class="input-area">
-                     {/* Changed step to "any" to allow integers and decimals */}
+                    <!-- Changed step to "any" -->
                     <input type="number" id="loadCurrent" name="loadCurrent" step="any" min="0.01" value="50" required>
                  </div>
             </div>
@@ -272,7 +272,7 @@
                     </select>
                 </div>
             </div>
-             {/* NEW Cable Insulation Type */}
+             <!-- Cable Insulation Type Selection -->
              <div class="form-group">
                 <label for="cableInsulation">Cable Insulation Type:</label>
                  <div class="input-area">
@@ -286,7 +286,7 @@
              <div class="form-group">
                 <label for="operatingTemp">Conductor Operating Temp (°C):</label>
                 <div class="input-area">
-                    {/* Initially readonly, enabled if "Other" insulation is selected */}
+                    <!-- Note: readonly attribute controlled by JS -->
                     <input type="number" id="operatingTemp" name="operatingTemp" step="1" min="-20" max="200" value="70" required readonly>
                      <small class="note">(Set automatically by Insulation Type, or manually if 'Other' is selected)</small>
                 </div>
@@ -378,8 +378,8 @@
         const frequencySelect = document.getElementById('frequency');
         const cableSizeSelect = document.getElementById('cableSize');
         const voltageSelect = document.getElementById('voltage');
-        const cableInsulationSelect = document.getElementById('cableInsulation'); // New
-        const operatingTempInput = document.getElementById('operatingTemp');     // New
+        const cableInsulationSelect = document.getElementById('cableInsulation');
+        const operatingTempInput = document.getElementById('operatingTemp');
         // Output Spans
         const resCurrentSpan = document.getElementById('resCurrent');
         const resOpTempSpan = document.getElementById('resOpTemp');
@@ -450,9 +450,11 @@
                  operatingTempInput.readOnly = false;
                  operatingTempInput.style.cursor = 'auto';
                  operatingTempInput.style.backgroundColor = '#fff';
+                 // Maybe focus the input when it becomes editable
+                 // operatingTempInput.focus();
              } else {
-                 const temp = selectedOption.dataset.temp; // Get temp from data attribute
-                 operatingTempInput.value = temp || 70; // Default to 70 if missing
+                 const temp = selectedOption.dataset.temp;
+                 operatingTempInput.value = temp || 70; // Default to 70 if data-temp missing
                  operatingTempInput.readOnly = true;
                  operatingTempInput.style.cursor = 'not-allowed';
                  operatingTempInput.style.backgroundColor = '#eee';
@@ -479,7 +481,7 @@
             loadPowerInput.required = isPowerSpec;
             // Power factor is only strictly required if AC and Power are selected
             powerFactorInput.required = (isAC && isPowerSpec);
-            frequencySelect.required = isAC;
+            frequencySelect.required = isAC; // Select usually doesn't need required if it has a default
 
              // Update Voltage options based on AC/DC/Phase
              populateVoltageOptions();
@@ -518,13 +520,12 @@
             };
 
              // --- Basic Input Validation ---
-             // (Keep existing validation)
-            if (isNaN(voltage) || voltage <= 0) throw new Error("Invalid System Voltage selection.");
-            if (isNaN(cableLength) || cableLength <= 0) throw new Error("Invalid Cable Length.");
-            if (isNaN(operatingTemp)) throw new Error("Invalid Operating Temperature.");
-            if (isNaN(cableSize) || cableSize <= 0) throw new Error("Invalid Cable Size.");
-            if (isNaN(parallelCables) || parallelCables < 1) throw new Error("Invalid Number of Parallel Cables.");
-            if (systemACDC === 'AC' && (isNaN(frequency) || frequency <= 0)) throw new Error("Invalid Frequency for AC system.");
+             if (isNaN(voltage) || voltage <= 0) throw new Error("Invalid System Voltage selection.");
+             if (isNaN(cableLength) || cableLength <= 0) throw new Error("Invalid Cable Length.");
+             if (isNaN(operatingTemp)) throw new Error("Invalid Operating Temperature.");
+             if (isNaN(cableSize) || cableSize <= 0) throw new Error("Invalid Cable Size.");
+             if (isNaN(parallelCables) || parallelCables < 1 || !Number.isInteger(parallelCables)) throw new Error("Number of Parallel Cables must be a whole number >= 1."); // Added integer check
+             if (systemACDC === 'AC' && (isNaN(frequency) || frequency <= 0)) throw new Error("Invalid Frequency for AC system.");
 
 
             // --- Calculate Current (I per phase/line) and Power (kW/kVA) ---
@@ -535,13 +536,19 @@
             let sinPhi = 0;     // Sin(phi)
 
              // Read Power Factor if applicable, handle potential NaN
-             let inputPf = (systemACDC === 'AC' && !isNaN(powerFactor)) ? powerFactor : 1.0;
-             if (inputPf <= 0 || inputPf > 1) inputPf = 1.0; // Default if invalid
+             let inputPf = (systemACDC === 'AC') ? powerFactor : 1.0; // Get PF value if AC
+             if (isNaN(inputPf) || inputPf <= 0 || inputPf > 1) { // Validate or default
+                  if (loadSpec === 'power' && systemACDC === 'AC') { // Only error if needed for calculation
+                      throw new Error("Invalid Power Factor provided (must be > 0 and <= 1).");
+                  }
+                  inputPf = 1.0; // Default to 1 otherwise (e.g., if load by current)
+             }
+
 
             if (loadSpec === 'current') {
                 I = loadCurrent;
                 if (isNaN(I) || I <= 0) throw new Error("Invalid Load Current.");
-                pf = inputPf; // Use the input (or default) PF
+                pf = inputPf; // Use the validated/default PF
                 sinPhi = (systemACDC === 'AC') ? Math.sqrt(1 - pf * pf) : 0;
 
                 // Calculate Power from Current
@@ -550,10 +557,10 @@
                     S_load_kVA = P_load_kW;
                 } else { // AC
                      if (systemPhase === '1ph') {
-                         P_load_kW = (voltage * I * pf) / 1000; // V is L-N
+                         P_load_kW = (voltage * I * pf) / 1000;
                          S_load_kVA = (voltage * I) / 1000;
                      } else { // AC 3ph
-                         P_load_kW = (Math.sqrt(3) * voltage * I * pf) / 1000; // V is L-L
+                         P_load_kW = (Math.sqrt(3) * voltage * I * pf) / 1000;
                          S_load_kVA = (Math.sqrt(3) * voltage * I) / 1000;
                      }
                 }
@@ -567,15 +574,14 @@
                     S_load_kVA = P_load_kW;
                     pf = 1.0;
                 } else { // AC
-                    pf = inputPf; // Use the input PF
-                    if (pf <= 0) throw new Error("Power Factor must be greater than 0 when calculating current from AC power.");
+                    pf = inputPf; // Use the validated PF
                     sinPhi = Math.sqrt(1 - pf * pf);
                     S_load_kVA = P_load_kW / pf; // kVA = kW / pf
 
                     if (systemPhase === '1ph') {
-                        I = (P_load_kW * 1000) / (voltage * pf); // V is L-N
+                        I = (P_load_kW * 1000) / (voltage * pf);
                     } else { // AC 3ph
-                        I = (P_load_kW * 1000) / (Math.sqrt(3) * voltage * pf); // V is L-L
+                        I = (P_load_kW * 1000) / (Math.sqrt(3) * voltage * pf);
                     }
                 }
                 if (isNaN(I) || I <= 0) throw new Error("Could not calculate valid current from power inputs.");
@@ -589,41 +595,39 @@
             results.calculatedPowerKva = S_load_kVA;
 
             // --- Calculate R, X, Z per *single conductor* run ---
-            // (Keep existing calculation logic)
             const rho_op = calculateResistancePerMeter(conductorMaterial, operatingTemp);
             const areaM2 = cableSize * 1e-6;
+            if (areaM2 <= 0) throw new Error("Cable area cannot be zero or negative.");
             const R_per_meter = rho_op / areaM2;
             const X_per_meter = (systemACDC === 'AC') ? getReactancePerMeter() : 0;
-            const R_cond = R_per_meter * cableLength;
-            const X_cond = X_per_meter * cableLength;
-            const Z_cond = Math.sqrt(R_cond * R_cond + X_cond * X_cond);
+
+            const R_cond = R_per_meter * cableLength; // Ohms
+            const X_cond = X_per_meter * cableLength; // Ohms
+            const Z_cond = Math.sqrt(R_cond * R_cond + X_cond * X_cond); // Ohms
+
             results.resistancePerCond_mOhm = R_cond * 1000;
             results.reactancePerCond_mOhm = X_cond * 1000;
             results.impedancePerCond_mOhm = Z_cond * 1000;
 
             // --- Calculate *Total* R, X per line (for parallel cables) ---
-            const R_total_per_line = R_cond / parallelCables;
-            const X_total_per_line = X_cond / parallelCables;
+            const R_total_per_line = R_cond / parallelCables; // Ohms
+            const X_total_per_line = X_cond / parallelCables; // Ohms
 
             // --- Calculate Voltage Drop (Vd_total) ---
-             // (Keep existing calculation logic)
             let Vd_total_V = 0;
-            if (systemACDC === 'DC') {
-                Vd_total_V = 2 * I * R_total_per_line;
-            } else {
+            if (systemACDC === 'DC') { Vd_total_V = 2 * I * R_total_per_line; }
+            else { // AC
                 if (systemPhase === '1ph') { Vd_total_V = 2 * I * (R_total_per_line * pf + X_total_per_line * sinPhi); }
                 else { Vd_total_V = Math.sqrt(3) * I * (R_total_per_line * pf + X_total_per_line * sinPhi); }
             }
             results.vdTotal_V = Vd_total_V;
 
             // --- Calculate Voltage Drop Percentage ---
-            // (Keep existing calculation logic)
             let vdPercent = 0;
             if (Vd_total_V > 0 && voltage > 0) { vdPercent = (Vd_total_V / voltage) * 100; }
             results.vdPercent = vdPercent;
 
             // --- Calculate Power Loss ---
-            // (Keep existing calculation logic)
             const I_cond = I / parallelCables;
             const Ploss_per_cond_W = I_cond * I_cond * R_cond;
             results.plossPerCond_W = Ploss_per_cond_W;
@@ -633,7 +637,6 @@
             results.plossTotal_W = Ploss_total_W;
 
              // --- Calculate Power Loss Percentage ---
-            // (Keep existing calculation logic)
              let plossPercent = 0;
              const P_load_W = P_load_kW * 1000;
              if (Ploss_total_W > 0 && P_load_W > 0) { plossPercent = (Ploss_total_W / P_load_W) * 100; }
@@ -649,10 +652,10 @@
             errorDiv.textContent = '';
 
             // Formatters
-            const fNum = (val, digits = 2) => (val !== null && !isNaN(val)) ? val.toFixed(digits) : 'N/A'; // Default 2 digits for V, A, %
+            const fNum = (val, digits = 2) => (val !== null && !isNaN(val)) ? val.toFixed(digits) : 'N/A';
             const fMilli = (val, digits = 2) => (val !== null && !isNaN(val)) ? val.toFixed(digits) : 'N/A';
-            const fWatt = (val, digits = 1) => (val !== null && !isNaN(val)) ? val.toFixed(digits) : 'N/A'; // 1 digit for Watts
-            const fKW = (val, digits = 3) => (val !== null && !isNaN(val)) ? val.toFixed(digits) : 'N/A'; // 3 digits for kW/kVA
+            const fWatt = (val, digits = 1) => (val !== null && !isNaN(val)) ? val.toFixed(digits) : 'N/A';
+            const fKW = (val, digits = 3) => (val !== null && !isNaN(val)) ? val.toFixed(digits) : 'N/A';
 
 
             // Populate results
@@ -717,14 +720,15 @@
             document.querySelectorAll('input[name="systemACDC"], input[name="systemPhase"], input[name="loadSpec"]').forEach(el => {
                 el.addEventListener('change', updateInputVisibility);
             });
-            cableInsulationSelect.addEventListener('change', updateOperatingTemp); // Listener for insulation type
+            // Add event listener for insulation type selection
+            cableInsulationSelect.addEventListener('change', updateOperatingTemp);
 
             // Add form submit listener
             lossForm.addEventListener('submit', handleFormSubmit);
 
             // Initial setup of visibility and temperature
             updateInputVisibility();
-            updateOperatingTemp();
+            updateOperatingTemp(); // Set initial temp based on default insulation
         });
 
     </script>
