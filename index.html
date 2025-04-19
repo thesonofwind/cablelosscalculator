@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cable Voltage Drop & Power Loss Calculator</title>
     <style>
+        /* --- Basic Styling (Keep from previous version or adapt) --- */
         body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             line-height: 1.6;
@@ -30,7 +31,7 @@
         h3 {
             color: #34495e;
             margin-top: 25px;
-            margin-bottom: 10px;
+            margin-bottom: 15px; /* Increased margin */
             border-bottom: 1px dashed #bdc3c7;
             padding-bottom: 4px;
         }
@@ -41,16 +42,16 @@
             align-items: center;
         }
         .form-group label:first-child {
-            flex-basis: 200px; /* Fixed width for labels */
+            flex-basis: 220px; /* Adjusted width for labels */
             margin-right: 15px;
             font-weight: bold;
             color: #555;
             text-align: right;
-            padding-right: 10px; /* Space before input */
+            padding-right: 10px;
         }
          .form-group .input-area {
              flex: 1;
-             min-width: 200px; /* Prevent inputs becoming too small */
+             min-width: 200px;
          }
         select, input[type="number"] {
             width: 100%;
@@ -59,6 +60,7 @@
             border-radius: 4px;
             box-sizing: border-box;
             transition: border-color 0.3s ease;
+            background-color: #fff; /* Ensure background */
         }
         select:focus, input[type="number"]:focus {
             border-color: #3498db;
@@ -74,8 +76,8 @@
             cursor: pointer;
             font-size: 16px;
             transition: background-color 0.3s ease;
-            display: block; /* Make it block level */
-            width: 100%; /* Full width button */
+            display: block;
+            width: 100%;
             margin-top: 20px;
         }
         button[type="submit"]:hover {
@@ -88,12 +90,17 @@
             border-radius: 4px;
             border-left: 5px solid #3498db;
         }
+        .results h3 {
+             margin-top: 0;
+             border-bottom: 1px solid #3498db;
+        }
         .results p {
             margin: 8px 0;
             display: flex;
-            justify-content: space-between; /* Align label and value */
+            justify-content: space-between;
             border-bottom: 1px dotted #bdc3c7;
-            padding-bottom: 5px;
+            padding-bottom: 6px; /* Slightly more padding */
+            flex-wrap: wrap; /* Allow wrapping on small screens */
         }
          .results p:last-child {
              border-bottom: none;
@@ -101,10 +108,13 @@
         .results strong {
             color: #34495e;
             margin-right: 10px;
+            flex-shrink: 0; /* Prevent label from shrinking too much */
         }
         .results span {
             font-weight: bold;
             color: #2980b9;
+            text-align: right; /* Align value to the right */
+            word-break: break-all; /* Prevent long numbers from breaking layout */
         }
         #error-message {
             color: #D8000C;
@@ -120,10 +130,9 @@
             font-size: 0.85em;
             color: #777;
             margin-top: 3px;
-            display: block; /* Ensure it takes full width */
+            display: block;
             width: 100%;
         }
-        /* Styles for radio buttons */
         .radio-group label {
             font-weight: normal;
             margin-left: 5px;
@@ -132,9 +141,15 @@
         }
         input[type="radio"] {
              cursor: pointer;
+             vertical-align: middle; /* Align radios better with labels */
         }
+         hr.results-divider {
+             border: none;
+             border-top: 1px dashed #ccc;
+             margin: 15px 0; /* More spacing around dividers */
+         }
 
-        /* Responsive adjustments */
+         /* Responsive adjustments */
          @media (max-width: 600px) {
              .form-group {
                  flex-direction: column;
@@ -146,6 +161,14 @@
                  margin-right: 0;
                  margin-bottom: 5px;
                  padding-right: 0;
+             }
+              .results p {
+                 flex-direction: column;
+                 align-items: flex-start; /* Align items left on mobile */
+             }
+             .results span {
+                 text-align: left; /* Align value left on mobile */
+                 margin-top: 3px;
              }
          }
     </style>
@@ -165,7 +188,7 @@
                     <input type="radio" id="sysAC" name="systemACDC" value="AC"> <label for="sysAC">AC</label>
                 </div>
             </div>
-             <div class="form-group" id="phase-group"> <!-- Show/hide via JS -->
+             <div class="form-group" id="phase-group" style="display: none;"> <!-- Initially hidden -->
                 <label>AC Phase:</label>
                 <div class="input-area radio-group">
                     <input type="radio" id="sysSinglePhase" name="systemPhase" value="1ph" checked> <label for="sysSinglePhase">Single Phase</label>
@@ -175,14 +198,18 @@
             <div class="form-group">
                 <label for="voltage">System Voltage (V):</label>
                  <div class="input-area">
-                    <input type="number" id="voltage" name="voltage" step="0.1" min="1" value="230" required>
-                    <small class="note">(Line-to-Neutral for 1ph AC, Line-to-Line for 3ph AC, Total DC Voltage)</small>
+                    <!-- Replaced input with select -->
+                    <select id="voltage" name="voltage" required></select>
+                    <small class="note">(Select nominal voltage. L-N for 1ph, L-L for 3ph, Total for DC)</small>
                 </div>
             </div>
-             <div class="form-group" id="frequency-group"> <!-- Show/hide via JS -->
+             <div class="form-group" id="frequency-group" style="display: none;"> <!-- Initially hidden -->
                 <label for="frequency">Frequency (Hz):</label>
                 <div class="input-area">
-                    <input type="number" id="frequency" name="frequency" step="1" min="1" value="50" required>
+                    <select id="frequency" name="frequency" required>
+                        <option value="50" selected>50 Hz</option>
+                        <option value="60">60 Hz</option>
+                    </select>
                 </div>
             </div>
 
@@ -236,7 +263,7 @@
                 <label for="operatingTemp">Est. Conductor Operating Temp (°C):</label>
                 <div class="input-area">
                     <input type="number" id="operatingTemp" name="operatingTemp" step="1" min="-20" max="200" value="70" required>
-                     <small class="note">(e.g., 70°C for PVC, 90°C for XLPE, or actual measured/estimated temp)</small>
+                     <small class="note">(Affects resistance. e.g., 70°C PVC, 90°C XLPE)</small>
                 </div>
             </div>
             <div class="form-group">
@@ -260,16 +287,24 @@
         <!-- Results Area -->
         <div id="results" class="results" style="display:none;">
              <h3>Calculation Results</h3>
-             <p><strong>Calculated Current per Phase/Line:</strong> <span id="resCurrent">N/A</span> A</p>
+             <!-- Load Summary -->
+             <p><strong>Load Current per Phase/Line (I):</strong> <span id="resCurrent">N/A</span> A</p>
+             <p><strong>Calculated Real Power (P):</strong> <span id="resPowerKw">N/A</span> kW</p>
+             <p id="resPowerKvaContainer"><strong>Calculated Apparent Power (S):</strong> <span id="resPowerKva">N/A</span> kVA</p> <!-- Show/hide via JS -->
+             <hr class="results-divider">
+             <!-- Conductor Properties -->
              <p><strong>Resistance per Conductor (at <span id="resOpTemp"></span>°C):</strong> <span id="resResistance">N/A</span> mΩ</p>
              <p><strong>Reactance per Conductor (Approx.):</strong> <span id="resReactance">N/A</span> mΩ</p>
              <p><strong>Impedance per Conductor:</strong> <span id="resImpedance">N/A</span> mΩ</p>
-             <hr style="border:none; border-top:1px dashed #ccc; margin: 10px 0;">
+             <hr class="results-divider">
+             <!-- Voltage Drop -->
              <p><strong>Total Voltage Drop:</strong> <span id="resVdTotal">N/A</span> V</p>
              <p><strong>Voltage Drop Percentage:</strong> <span id="resVdPercent">N/A</span> %</p>
-             <hr style="border:none; border-top:1px dashed #ccc; margin: 10px 0;">
+             <hr class="results-divider">
+              <!-- Power Loss -->
              <p><strong>Power Loss per Conductor:</strong> <span id="resPlossCond">N/A</span> W</p>
              <p><strong>Total System Power Loss:</strong> <span id="resPlossTotal">N/A</span> W</p>
+             <p><strong>Total Power Loss Percentage:</strong> <span id="resPlossPercent">N/A</span> %</p>
         </div>
 
         <!-- Error Message Area -->
@@ -287,9 +322,39 @@
             copper: 0.00393,     // per °C
             aluminium: 0.00403  // per °C (can vary slightly with alloy)
         };
-        // Approximate Reactance (Ohm/meter) - VERY Simplified!
         const DEFAULT_REACTANCE_OHM_PER_METER = 0.08e-3; // ~0.08 mOhm/meter
-        const CABLE_SIZES_MM2 = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500, 630, 800, 1000]; // Expanded list
+        const CABLE_SIZES_MM2 = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120, 150, 185, 240, 300, 400, 500, 630, 800, 1000];
+
+        // Standard Voltages (Value, Display Text, System Hint)
+        const STANDARD_VOLTAGES = [
+             // Single Phase (Common L-N)
+             { value: 100, text: "100 V (L-N)", type: "1ph" },
+             { value: 110, text: "110 V (L-N)", type: "1ph" },
+             { value: 120, text: "120 V (L-N)", type: "1ph" },
+             { value: 200, text: "200 V (L-N)", type: "1ph" }, // Less common 1ph
+             { value: 220, text: "220 V (L-N)", type: "1ph" },
+             { value: 230, text: "230 V (L-N)", type: "1ph", default: true }, // Common default
+             { value: 240, text: "240 V (L-N)", type: "1ph" },
+             { value: 277, text: "277 V (L-N)", type: "1ph" }, // From 480V 3ph Wye
+             // Three Phase (Common L-L)
+             { value: 200, text: "200 V (L-L)", type: "3ph" }, // Japan 3ph
+             { value: 208, text: "208 V (L-L)", type: "3ph" }, // US 120/208 Wye
+             { value: 230, text: "230 V (L-L)", type: "3ph" }, // Older Euro / Delta
+             { value: 240, text: "240 V (L-L)", type: "3ph" }, // Delta
+             { value: 380, text: "380 V (L-L)", type: "3ph" }, // Older Euro Wye
+             { value: 400, text: "400 V (L-L)", type: "3ph", default: true }, // Common Euro/Intl Wye (230V L-N)
+             { value: 415, text: "415 V (L-L)", type: "3ph" }, // UK/Aus/India (240V L-N)
+             { value: 440, text: "440 V (L-L)", type: "3ph" },
+             { value: 480, text: "480 V (L-L)", type: "3ph" }, // US Wye (277V L-N) or Delta
+             { value: 600, text: "600 V (L-L)", type: "3ph" }, // Canada/US
+             { value: 690, text: "690 V (L-L)", type: "3ph" },
+             // DC Voltages
+             { value: 12, text: "12 V", type: "DC" },
+             { value: 24, text: "24 V", type: "DC" },
+             { value: 48, text: "48 V", type: "DC" },
+             { value: 110, text: "110 V", type: "DC" },
+             { value: 220, text: "220 V", type: "DC" },
+        ];
 
         // --- DOM References ---
         const lossForm = document.getElementById('loss-form');
@@ -305,8 +370,9 @@
         const loadCurrentInput = document.getElementById('loadCurrent');
         const loadPowerInput = document.getElementById('loadPower');
         const powerFactorInput = document.getElementById('powerFactor');
-        const frequencyInput = document.getElementById('frequency');
+        const frequencySelect = document.getElementById('frequency'); // Now a select
         const cableSizeSelect = document.getElementById('cableSize');
+        const voltageSelect = document.getElementById('voltage'); // Now a select
         // Output Spans
         const resCurrentSpan = document.getElementById('resCurrent');
         const resOpTempSpan = document.getElementById('resOpTemp');
@@ -317,56 +383,100 @@
         const resVdPercentSpan = document.getElementById('resVdPercent');
         const resPlossCondSpan = document.getElementById('resPlossCond');
         const resPlossTotalSpan = document.getElementById('resPlossTotal');
+        const resPowerKwSpan = document.getElementById('resPowerKw'); // New
+        const resPowerKvaContainer = document.getElementById('resPowerKvaContainer'); // New container
+        const resPowerKvaSpan = document.getElementById('resPowerKva'); // New
+        const resPlossPercentSpan = document.getElementById('resPlossPercent'); // New
 
-        // --- Populate Cable Size Dropdown ---
+        // --- Populate Select Dropdowns ---
         function populateCableSizes() {
             CABLE_SIZES_MM2.forEach(size => {
                 const option = document.createElement('option');
                 option.value = size;
                 option.textContent = size;
-                if (size === 16) { // Set default selection
-                     option.selected = true;
-                }
+                if (size === 16) option.selected = true;
                 cableSizeSelect.appendChild(option);
             });
         }
+
+        function populateVoltageOptions() {
+            const selectedSystem = document.querySelector('input[name="systemACDC"]:checked')?.value || 'DC';
+            const selectedPhase = document.querySelector('input[name="systemPhase"]:checked')?.value || '1ph';
+            const currentVoltageValue = voltageSelect.value; // Remember current selection if possible
+
+            voltageSelect.innerHTML = ''; // Clear existing options
+
+            STANDARD_VOLTAGES.forEach(v => {
+                 // Filter based on AC/DC and Phase selection
+                 let showOption = false;
+                 if (selectedSystem === 'DC' && v.type === 'DC') {
+                     showOption = true;
+                 } else if (selectedSystem === 'AC') {
+                     if (selectedPhase === '1ph' && v.type === '1ph') showOption = true;
+                     if (selectedPhase === '3ph' && v.type === '3ph') showOption = true;
+                     // Optionally show DC voltages even when AC is selected? Maybe not.
+                 }
+
+                 if (showOption) {
+                     const option = document.createElement('option');
+                     option.value = v.value;
+                     option.textContent = v.text;
+                     // Try to re-select previous value or default
+                     if (v.value.toString() === currentVoltageValue) {
+                         option.selected = true;
+                     } else if (v.default && !voltageSelect.querySelector('option[selected]')) {
+                         option.selected = true; // Select default if nothing else matched
+                     }
+                    voltageSelect.appendChild(option);
+                 }
+            });
+             // If no option ends up selected (e.g., switching AC/DC removed previous selection), select the first one
+             if (voltageSelect.selectedIndex === -1 && voltageSelect.options.length > 0) {
+                 voltageSelect.options[0].selected = true;
+             }
+        }
+
 
         // --- Input Visibility Logic ---
         function updateInputVisibility() {
             const isAC = document.getElementById('sysAC').checked;
             const isPowerSpec = document.getElementById('loadSpecPower').checked;
+            const is3Phase = document.getElementById('sysThreePhase').checked;
 
-            phaseGroup.style.display = isAC ? 'flex' : 'none'; // Use flex for form-group
+            // System related
+            phaseGroup.style.display = isAC ? 'flex' : 'none';
             frequencyGroup.style.display = isAC ? 'flex' : 'none';
+
+             // Load related
             loadCurrentGroup.style.display = isPowerSpec ? 'none' : 'flex';
             loadPowerGroup.style.display = isPowerSpec ? 'flex' : 'none';
             powerFactorGroup.style.display = (isAC && isPowerSpec) ? 'flex' : 'none';
 
-            // Dynamically set 'required' attribute
+            // Dynamically set 'required' attribute for validation
             loadCurrentInput.required = !isPowerSpec;
             loadPowerInput.required = isPowerSpec;
             powerFactorInput.required = (isAC && isPowerSpec);
-            frequencyInput.required = isAC;
+            frequencySelect.required = isAC; // Select usually doesn't need required if it has a default
+
+             // Update Voltage options based on AC/DC/Phase
+             populateVoltageOptions();
         }
 
         // --- Calculation Functions ---
-        function calculateResistancePerMeter(material, tempOpC) {
+        function calculateResistancePerMeter(material, tempOpC) { // Calculates Resistivity first
             if (!RESISTIVITY_20C[material] || !TEMP_COEFF[material]) {
                 throw new Error(`Material properties not found for: ${material}`);
             }
-            if (isNaN(tempOpC)) {
-                throw new Error(`Invalid operating temperature: ${tempOpC}`);
-            }
+            if (isNaN(tempOpC)) throw new Error(`Invalid operating temperature: ${tempOpC}`);
             const rho20 = RESISTIVITY_20C[material];
             const alpha = TEMP_COEFF[material];
             // rho_T = rho_20 * (1 + alpha * (T - 20))
             const rho_op = rho20 * (1 + alpha * (tempOpC - 20));
-            return rho_op; // Return resistivity (Ohm-meter)
+            return rho_op; // Return resistivity (Ohm-meter) at operating temp
         }
 
         function getReactancePerMeter(/*material, cableSizeMM2*/) {
             // Simplified: Using a default value.
-            // Could be expanded later with lookups based on material/size
             return DEFAULT_REACTANCE_OHM_PER_METER; // Ohm per meter
         }
 
@@ -375,47 +485,73 @@
                 systemACDC, systemPhase, voltage, frequency,
                 loadSpec, loadCurrent, loadPower, powerFactor,
                 cableLength, conductorMaterial, operatingTemp, cableSize, parallelCables
-            } = inputs;
+            } = inputs; // Voltage is now the selected value (float)
+
+            const results = { // Initialize result object
+                calculatedCurrent: null, calculatedPowerKw: null, calculatedPowerKva: null,
+                resistancePerCond_mOhm: null, reactancePerCond_mOhm: null, impedancePerCond_mOhm: null,
+                vdTotal_V: null, vdPercent: null,
+                plossPerCond_W: null, plossTotal_W: null, plossPercent: null,
+                operatingTemp: operatingTemp, // Pass through op temp
+                error: null
+            };
+
 
             // --- Basic Input Validation ---
-            if (isNaN(voltage) || voltage <= 0) throw new Error("Invalid System Voltage.");
+            if (isNaN(voltage) || voltage <= 0) throw new Error("Invalid System Voltage selection.");
             if (isNaN(cableLength) || cableLength <= 0) throw new Error("Invalid Cable Length.");
             if (isNaN(operatingTemp)) throw new Error("Invalid Operating Temperature.");
             if (isNaN(cableSize) || cableSize <= 0) throw new Error("Invalid Cable Size.");
             if (isNaN(parallelCables) || parallelCables < 1) throw new Error("Invalid Number of Parallel Cables.");
             if (systemACDC === 'AC' && (isNaN(frequency) || frequency <= 0)) throw new Error("Invalid Frequency for AC system.");
 
-            // --- Calculate Current (I per phase/line) ---
-            let I = NaN;
-            let pf = 1.0;
-            let sinPhi = 0;
+
+            // --- Calculate Current (I per phase/line) and Power (kW/kVA) ---
+            let I = NaN;        // Line/Phase Current
+            let P_load_kW = NaN;// Load Real Power
+            let S_load_kVA = NaN;// Load Apparent Power
+            let pf = 1.0;       // Power Factor
+            let sinPhi = 0;     // Sin(phi)
 
             if (loadSpec === 'current') {
                 I = loadCurrent;
                 if (isNaN(I) || I <= 0) throw new Error("Invalid Load Current.");
-                // If AC, try to read PF anyway for Vdrop calc, default to 1 if not power spec
-                if(systemACDC === 'AC') {
-                     pf = !isNaN(powerFactor) && powerFactor > 0 && powerFactor <= 1 ? powerFactor : 1.0;
+
+                // Calculate Power from Current
+                if (systemACDC === 'DC') {
+                    P_load_kW = (voltage * I) / 1000;
+                    S_load_kVA = P_load_kW; // kVA = kW for DC
+                    pf = 1.0;
+                } else { // AC
+                     pf = !isNaN(powerFactor) && powerFactor > 0 && powerFactor <= 1 ? powerFactor : 1.0; // Get PF if available
                      sinPhi = Math.sqrt(1 - pf * pf);
+                     if (systemPhase === '1ph') { // AC 1ph
+                         P_load_kW = (voltage * I * pf) / 1000; // V is L-N
+                         S_load_kVA = (voltage * I) / 1000;
+                     } else { // AC 3ph
+                         P_load_kW = (Math.sqrt(3) * voltage * I * pf) / 1000; // V is L-L
+                         S_load_kVA = (Math.sqrt(3) * voltage * I) / 1000;
+                     }
                 }
             } else if (loadSpec === 'power') {
-                const P_kW = loadPower;
-                if (isNaN(P_kW) || P_kW <= 0) throw new Error("Invalid Load Power.");
-                const P_W = P_kW * 1000;
+                P_load_kW = loadPower;
+                if (isNaN(P_load_kW) || P_load_kW <= 0) throw new Error("Invalid Load Power.");
 
+                // Calculate Current from Power
                 if (systemACDC === 'DC') {
-                    I = P_W / voltage;
+                    I = (P_load_kW * 1000) / voltage;
+                    S_load_kVA = P_load_kW;
                     pf = 1.0;
-                    sinPhi = 0;
                 } else { // AC
-                    pf = powerFactor; // Already parsed in getInputs
+                    pf = powerFactor; // Already parsed
                     if (isNaN(pf) || pf <= 0 || pf > 1) throw new Error("Invalid Power Factor for AC Power load.");
                     sinPhi = Math.sqrt(1 - pf * pf);
+                    S_load_kVA = P_load_kW / pf; // kVA = kW / pf
 
-                    if (systemPhase === '1ph') { // AC Single Phase
-                        I = P_W / (voltage * pf); // V is L-N
-                    } else { // AC Three Phase
-                        I = P_W / (Math.sqrt(3) * voltage * pf); // V is L-L
+                    if (systemPhase === '1ph') { // AC 1ph
+                        I = (P_load_kW * 1000) / (voltage * pf); // V is L-N
+                    } else { // AC 3ph
+                        I = (P_load_kW * 1000) / (Math.sqrt(3) * voltage * pf); // V is L-L
                     }
                 }
                 if (isNaN(I) || I <= 0) throw new Error("Could not calculate valid current from power inputs.");
@@ -423,86 +559,103 @@
                 throw new Error("Invalid Load Specification method.");
             }
 
-            // --- Calculate R, X, Z per *single conductor* run ---
-            const rho_op = calculateResistancePerMeter(conductorMaterial, operatingTemp);
-            const areaM2 = cableSize * 1e-6; // Convert mm² to m²
-            const R_per_meter = rho_op / areaM2;
-            const X_per_meter = (systemACDC === 'AC') ? getReactancePerMeter(/*conductorMaterial, cableSize*/) : 0;
+            // Store calculated values
+            results.calculatedCurrent = I;
+            results.calculatedPowerKw = P_load_kW;
+            results.calculatedPowerKva = S_load_kVA;
 
-            const R_cond = R_per_meter * cableLength; // Ohms
-            const X_cond = X_per_meter * cableLength; // Ohms
+            // --- Calculate R, X, Z per *single conductor* run ---
+            const rho_op = calculateResistancePerMeter(conductorMaterial, operatingTemp); // Ohm-meter
+            const areaM2 = cableSize * 1e-6; // Convert mm² to m²
+            const R_per_meter = rho_op / areaM2; // Ohm/meter
+            const X_per_meter = (systemACDC === 'AC') ? getReactancePerMeter(/*conductorMaterial, cableSize*/) : 0; // Ohm/meter
+
+            const R_cond = R_per_meter * cableLength; // Ohms for total length
+            const X_cond = X_per_meter * cableLength; // Ohms for total length
             const Z_cond = Math.sqrt(R_cond * R_cond + X_cond * X_cond); // Ohms
 
-            // --- Calculate *Total* R, X per line (for parallel cables) ---
+            results.resistancePerCond_mOhm = R_cond * 1000;
+            results.reactancePerCond_mOhm = X_cond * 1000;
+            results.impedancePerCond_mOhm = Z_cond * 1000;
+
+            // --- Calculate *Total* R, X per line (considering parallel cables) ---
             const R_total_per_line = R_cond / parallelCables; // Ohms
             const X_total_per_line = X_cond / parallelCables; // Ohms
 
             // --- Calculate Voltage Drop (Vd_total) ---
             let Vd_total_V = 0;
             if (systemACDC === 'DC') {
-                // DC Vdrop = 2 * I * R_total (Line + Return path)
-                Vd_total_V = 2 * I * R_total_per_line;
+                Vd_total_V = 2 * I * R_total_per_line; // Line + Return path
             } else { // AC
                 if (systemPhase === '1ph') {
-                    // AC 1ph Vdrop = 2 * I * (R_total * cosφ + X_total * sinφ) (Line + Neutral path)
-                    Vd_total_V = 2 * I * (R_total_per_line * pf + X_total_per_line * sinPhi);
+                    Vd_total_V = 2 * I * (R_total_per_line * pf + X_total_per_line * sinPhi); // Line + Neutral path
                 } else { // 3ph
-                    // AC 3ph Vdrop (Line-to-Line) = sqrt(3) * I * (R_total * cosφ + X_total * sinφ)
-                    Vd_total_V = Math.sqrt(3) * I * (R_total_per_line * pf + X_total_per_line * sinPhi);
+                    Vd_total_V = Math.sqrt(3) * I * (R_total_per_line * pf + X_total_per_line * sinPhi); // Line-to-Line Vdrop
                 }
             }
+            results.vdTotal_V = Vd_total_V;
 
             // --- Calculate Voltage Drop Percentage ---
             let vdPercent = 0;
             if (Vd_total_V > 0 && voltage > 0) {
-                 // Use the input system voltage as the base (L-N for 1ph, L-L for 3ph as specified in label)
-                vdPercent = (Vd_total_V / voltage) * 100;
+                vdPercent = (Vd_total_V / voltage) * 100; // Compare drop against selected system voltage
             }
+            results.vdPercent = vdPercent;
 
             // --- Calculate Power Loss ---
-            // Loss in ONE conductor strand
-            const I_cond = I / parallelCables; // Current in a single conductor
-            const Ploss_per_cond_W = I_cond * I_cond * R_cond;
+            const I_cond = I / parallelCables; // Current in a single conductor strand
+            const Ploss_per_cond_W = I_cond * I_cond * R_cond; // Loss in ONE conductor strand (I²R)
+            results.plossPerCond_W = Ploss_per_cond_W;
 
             // Total system loss
             let Ploss_total_W = 0;
              if (systemACDC === 'DC' || systemPhase === '1ph') {
-                // DC or AC 1ph: Loss in 2 current carrying paths (Line + Return/Neutral)
-                Ploss_total_W = 2 * parallelCables * Ploss_per_cond_W;
+                Ploss_total_W = 2 * parallelCables * Ploss_per_cond_W; // 2 current carrying paths
             } else { // AC 3ph
-                // AC 3ph: Loss in 3 phases
-                Ploss_total_W = 3 * parallelCables * Ploss_per_cond_W;
+                Ploss_total_W = 3 * parallelCables * Ploss_per_cond_W; // 3 current carrying paths
             }
+            results.plossTotal_W = Ploss_total_W;
 
-            // --- Return Results ---
-            return {
-                calculatedCurrent: I,
-                resistancePerCond_mOhm: R_cond * 1000,
-                reactancePerCond_mOhm: X_cond * 1000,
-                impedancePerCond_mOhm: Z_cond * 1000,
-                vdTotal_V: Vd_total_V,
-                vdPercent: vdPercent,
-                plossPerCond_W: Ploss_per_cond_W,
-                plossTotal_W: Ploss_total_W,
-                operatingTemp: operatingTemp // Pass through for display
-            };
+             // --- Calculate Power Loss Percentage ---
+             let plossPercent = 0;
+             const P_load_W = P_load_kW * 1000; // Convert load kW to W
+             if (Ploss_total_W > 0 && P_load_W > 0) {
+                 plossPercent = (Ploss_total_W / P_load_W) * 100;
+             }
+             results.plossPercent = plossPercent;
+
+            return results; // Return the populated results object
         }
 
         // --- Display Logic ---
-        function displayResults(results) {
+        function displayResults(res) { // Use shorter name 'res' for results object
             resultsDiv.style.display = 'block';
             errorDiv.style.display = 'none';
             errorDiv.textContent = '';
 
-            resCurrentSpan.textContent = results.calculatedCurrent.toFixed(2);
-            resOpTempSpan.textContent = results.operatingTemp; // Show temp used
-            resResistanceSpan.textContent = results.resistancePerCond_mOhm.toFixed(2);
-            resReactanceSpan.textContent = results.reactancePerCond_mOhm.toFixed(2);
-            resImpedanceSpan.textContent = results.impedancePerCond_mOhm.toFixed(2);
-            resVdTotalSpan.textContent = results.vdTotal_V.toFixed(2);
-            resVdPercentSpan.textContent = results.vdPercent.toFixed(2);
-            resPlossCondSpan.textContent = results.plossPerCond_W.toFixed(1);
-            resPlossTotalSpan.textContent = results.plossTotal_W.toFixed(1);
+            // Formatters
+            const fNum = (val, digits = 2) => (val !== null && !isNaN(val)) ? val.toFixed(digits) : 'N/A';
+            const fMilli = (val, digits = 2) => (val !== null && !isNaN(val)) ? val.toFixed(digits) : 'N/A';
+            const fWatt = (val, digits = 1) => (val !== null && !isNaN(val)) ? val.toFixed(digits) : 'N/A';
+
+            // Populate results
+            resCurrentSpan.textContent = fNum(res.calculatedCurrent);
+            resPowerKwSpan.textContent = fNum(res.calculatedPowerKw);
+            resPowerKvaSpan.textContent = fNum(res.calculatedPowerKva);
+            // Show/Hide kVA based on system type
+            resPowerKvaContainer.style.display = document.getElementById('sysAC').checked ? 'flex' : 'none';
+
+            resOpTempSpan.textContent = res.operatingTemp; // Show temp used
+            resResistanceSpan.textContent = fMilli(res.resistancePerCond_mOhm);
+            resReactanceSpan.textContent = fMilli(res.reactancePerCond_mOhm);
+            resImpedanceSpan.textContent = fMilli(res.impedancePerCond_mOhm);
+
+            resVdTotalSpan.textContent = fNum(res.vdTotal_V);
+            resVdPercentSpan.textContent = fNum(res.vdPercent);
+
+            resPlossCondSpan.textContent = fWatt(res.plossPerCond_W);
+            resPlossTotalSpan.textContent = fWatt(res.plossTotal_W);
+            resPlossPercentSpan.textContent = fNum(res.plossPercent); // Loss %
         }
 
         function displayError(message) {
@@ -513,9 +666,9 @@
 
         // --- Event Handlers ---
         function handleFormSubmit(event) {
-            event.preventDefault(); // Stop page reload
+            event.preventDefault();
             try {
-                // 1. Get Inputs
+                // Get Inputs (Parse numbers carefully)
                 const formData = new FormData(lossForm);
                 const inputs = {};
                 for(let [key, value] of formData.entries()) {
@@ -526,16 +679,14 @@
                         inputs[key] = value;
                     }
                 }
-                 // Ensure radio button values are captured correctly
-                 inputs.systemACDC = document.querySelector('input[name="systemACDC"]:checked')?.value || 'DC';
-                 inputs.systemPhase = document.querySelector('input[name="systemPhase"]:checked')?.value || '1ph';
-                 inputs.loadSpec = document.querySelector('input[name="loadSpec"]:checked')?.value || 'current';
+                inputs.systemACDC = document.querySelector('input[name="systemACDC"]:checked')?.value || 'DC';
+                inputs.systemPhase = document.querySelector('input[name="systemPhase"]:checked')?.value || '1ph';
+                inputs.loadSpec = document.querySelector('input[name="loadSpec"]:checked')?.value || 'current';
 
-
-                // 2. Calculate
+                // Calculate
                 const results = calculateVDropAndLoss(inputs);
 
-                // 3. Display
+                // Display
                 displayResults(results);
 
             } catch (error) {
@@ -547,12 +698,16 @@
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', () => {
             populateCableSizes(); // Add sizes to the dropdown
-            // Add event listeners for radio buttons to update visibility
-            document.querySelectorAll('input[name="systemACDC"], input[name="loadSpec"]').forEach(radio => {
+            populateVoltageOptions(); // Initial population based on default DC
+
+            // Add event listeners for radio buttons to update visibility AND voltage options
+            document.querySelectorAll('input[name="systemACDC"], input[name="systemPhase"], input[name="loadSpec"]').forEach(radio => {
                 radio.addEventListener('change', updateInputVisibility);
             });
+
             // Add form submit listener
             lossForm.addEventListener('submit', handleFormSubmit);
+
             // Initial setup of input visibility
             updateInputVisibility();
         });
